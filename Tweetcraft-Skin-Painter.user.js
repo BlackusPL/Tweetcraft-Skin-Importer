@@ -2,12 +2,11 @@
 // @name            Tweetcraft Skin Painter
 // @author          BlackusPL
 // @namespace       https://darknessair.ovh
-// @version         1.0.0
+// @version         1.0.1
 // @source          https://github.com/BlackusPL/Tweetcraft-Skin-Importer
 // @updateURL       https://github.com/BlackusPL/Tweetcraft-Skin-Importer/raw/main/Tweetcraft-Skin-Painter.meta.js
 // @downloadURL     https://github.com/BlackusPL/Tweetcraft-Skin-Importer/raw/main/Tweetcraft-Skin-Painter.user.js
 // @description     Throw in a PNG with a skin (drag or select) and the script will immediately paint the entire character (front + back) and replace the skin in the game.
-// @description:pl  Wrzuć PNG ze skinem (przeciągnij lub wybierz), a skrypt od razu namaluje całą postać (przód + tył) i podmieni skin w grze.
 // @icon            https://www.google.com/s2/favicons?sz=64&domain=tweetcraft.jai.vin
 // @match           https://tweetcraft.jai.vin
 // @run-at          document-start
@@ -16,6 +15,40 @@
 
 (function () {
   'use strict';
+
+  const words = {
+	hook_img: '[TSP] hook img not working',
+	hook_fetch: '[TSP] hook fetch not working',
+    panel: [
+        'Drag the <b>PNG</b> file with skin<br> here or click to select',
+        ' Reload the page immediately after uploading (so the game uses skin)',
+        'Apply in game',
+        'Remove skin',
+        'Detected images in game (skin texture selection)',
+        'None – images will appear when the game loads.',
+        'Return to automatic detection',
+        'Drop the PNG with skin'
+    ],
+    skin_size_warn: ['Wrong size','skin must have 64×64 or 64×32'],
+    not_image: 'This is not a PNG file.',
+    skin_painted: [
+        'Skin painted',
+        'old format 64×32',
+        'classic / Steve',
+        'Skin saved'
+    ],
+    skin_saved: 'Skin saved – reloading game…',
+    unable_to_load: 'Failed to load skin.',
+	filefirst: 'First load PNG file.',
+	skin_removed: 'Skin removed. Reload page to return to default.',
+	default_detect: 'Automatic detection restored.',
+    skin_matches: 'They fit the skin size',
+    no_sizes: 'No images 64×64 / 64×32',
+    others: 'Other',
+    use: 'use',
+	texture_selected: 'The target texture was selected. Reloading…',
+	skin_loaded: 'Loaded saved skin.'
+  };
 
   /* ------------------------------------------------------------------ *
    *  Pamięć (localStorage z try/catch)
@@ -92,7 +125,7 @@
       if (String(name).toLowerCase() === 'src') v = swap(this, v);
       return origSetAttr.call(this, name, v);
     };
-  } catch (e) { console.warn('[TSP] hook img nie zadziałał', e); }
+  } catch (e) { console.warn(words.hook_img, e); }
 
   // --- hook: fetch (TextureLoader / ImageBitmapLoader / własne loadery)
   try {
@@ -118,7 +151,7 @@
       } catch (e) { /* ignore */ }
       return p;
     };
-  } catch (e) { console.warn('[TSP] hook fetch nie zadziałał', e); }
+  } catch (e) { console.warn(words.hook_fetch, e); }
 
   /* ------------------------------------------------------------------ *
    *  Rysowanie całej postaci ze skina (przód + tył)
@@ -259,22 +292,22 @@
       <button class="fab" title="Skin Painter">🎨</button>
       <div class="panel">
         <h3>🎨 Tweetcraft Skin Painter</h3>
-        <div class="drop">Przeciągnij tu plik <b>PNG</b> ze skinem<br>albo kliknij, żeby wybrać</div>
+        <div class="drop">${words.panel[0]}</div>
         <input type="file" accept="image/png" hidden>
         <canvas width="10" height="10"></canvas>
         <div class="st"></div>
-        <label><input type="checkbox" class="auto"> Od razu przeładuj stronę po wgraniu (żeby gra użyła skina)</label>
+        <label><input type="checkbox" class="auto">${words.panel[1]}</label>
         <div class="row">
-          <button class="b apply">Zastosuj w grze</button>
-          <button class="b sec clear">Usuń skin</button>
+          <button class="b apply">${words.panel[2]}</button>
+          <button class="b sec clear">${words.panel[3]}</button>
         </div>
         <details>
-          <summary>Wykryte obrazy w grze (wybór tekstury skina)</summary>
-          <div class="cands">Brak – obrazy pojawią się po załadowaniu gry.</div>
-          <div class="row"><button class="b sec resetTarget">Wróć do automatycznego wykrywania</button></div>
+          <summary>${words.panel[4]}</summary>
+          <div class="cands">${words.panel[5]}</div>
+          <div class="row"><button class="b sec resetTarget">${words.panel[6]}</button></div>
         </details>
       </div>
-      <div class="overlay">Upuść PNG ze skinem</div>
+      <div class="overlay">${words.panel[7]}</div>
     `;
     (document.documentElement || document.body).appendChild(host);
 
@@ -296,7 +329,7 @@
     async function showSkin(dataURL) {
       const img = await loadImage(dataURL);
       if (!isSkinShape(img.width, img.height)) {
-        throw new Error(`Zły rozmiar ${img.width}×${img.height} – skin ma 64×64 lub 64×32.`);
+        throw new Error(`${words.skin_size_warn[0]} ${img.width}×${img.height} – ${words.skin_size_warn[1]}.`);
       }
       const S = Math.max(4, Math.floor(300 / 36));
       const info = drawCharacter(canvas, img, S);
@@ -305,7 +338,7 @@
 
     async function handleFile(file) {
       if (!file) return;
-      if (file.type !== 'image/png' && !/\.png$/i.test(file.name)) { say('To nie jest plik PNG.', true); return; }
+      if (file.type !== 'image/png' && !/\.png$/i.test(file.name)) { say(words.not_image, true); return; }
       const dataURL = await new Promise((res, rej) => {
         const r = new FileReader();
         r.onload = () => res(r.result);
@@ -316,9 +349,9 @@
         const info = await showSkin(dataURL);
         store.set(KEY_SKIN, dataURL);
         panel.classList.add('open');
-        say(`Postać namalowana (${info.legacy ? 'stary format 64×32' : info.slim ? 'slim / Alex' : 'klasyczny / Steve'}). Skin zapisany.`);
-        if (auto.checked) { say('Skin zapisany – przeładowuję grę…'); setTimeout(() => location.reload(), 500); }
-      } catch (e) { say(e.message || 'Nie udało się wczytać skina.', true); }
+        say(`${words.skin_painted[0]} (${info.legacy ? words.skin_painted[1] : info.slim ? 'slim / Alex' : words.skin_painted[2]}). ${words.skin_painted[3]}.`);
+        if (auto.checked) { say(words.skin_saved); setTimeout(() => location.reload(), 500); }
+      } catch (e) { say(e.message || words.unable_to_load, true); }
     }
 
     drop.addEventListener('click', () => input.click());
@@ -342,15 +375,15 @@
     }, true);
 
     $('.apply').addEventListener('click', () => {
-      if (!store.get(KEY_SKIN)) { say('Najpierw wgraj plik PNG.', true); return; }
+      if (!store.get(KEY_SKIN)) { say(words.filefirst, true); return; }
       location.reload();
     });
     $('.clear').addEventListener('click', () => {
       store.del(KEY_SKIN);
       canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
-      say('Skin usunięty. Przeładuj stronę, żeby wrócić do domyślnego.');
+      say(words.skin_removed);
     });
-    $('.resetTarget').addEventListener('click', () => { store.del(KEY_TARGET); renderCands(); say('Przywrócono automatyczne wykrywanie.'); });
+    $('.resetTarget').addEventListener('click', () => { store.del(KEY_TARGET); renderCands(); say(words.default_detect); });
 
     function renderCands() {
       const box = $('.cands');
@@ -362,15 +395,15 @@
         const name = url.split('/').slice(-2).join('/');
         const on = target === url;
         return `<div class="cand"><span title="${url}">${on ? '✔ ' : ''}${name} (${v.w}×${v.h})</span>
-                <button data-url="${url}">użyj</button></div>`;
+                <button data-url="${url}">${words.use}</button></div>`;
       };
       box.innerHTML =
-        (items.length ? '<b>Pasują wymiarem do skina:</b>' + items.map(row).join('') : '<i>Brak obrazów 64×64 / 64×32.</i>') +
-        (rest.length ? '<div style="margin-top:8px"><b>Pozostałe:</b></div>' + rest.map(row).join('') : '');
+        (items.length ? `<b>${words.skin_matches}:</b>` + items.map(row).join('') : `<i>${words.no_sizes}.</i>`) +
+        (rest.length ? `<div style="margin-top:8px"><b>${words.others}:</b></div>` + rest.map(row).join('') : '');
       box.querySelectorAll('button[data-url]').forEach((b) =>
         b.addEventListener('click', () => {
           store.set(KEY_TARGET, b.dataset.url);
-          say('Wybrano teksturę docelową. Przeładowuję…');
+          say(words.texture_selected);
           setTimeout(() => location.reload(), 400);
         }));
     }
@@ -379,7 +412,7 @@
 
     // pokaż zapisany skin przy starcie
     const saved = store.get(KEY_SKIN);
-    if (saved) showSkin(saved).then(() => say('Wczytano zapisany skin.')).catch(() => {});
+    if (saved) showSkin(saved).then(() => say(words.skin_loaded)).catch(() => {});
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', buildUI);

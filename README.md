@@ -10,4 +10,4 @@ After importing, save your skin and you good to go.
 
 # How to Install?
 
-Use Tampermonkey or Violentmonkey
+Install Tampermonkey or Violentmonkey extension then click [install](https://github.com/BlackusPL/Tweetcraft-Skin-Importer/raw/main/Tweetcraft-Skin-Painter.user.js)
