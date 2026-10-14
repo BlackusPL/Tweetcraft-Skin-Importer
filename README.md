@@ -1,3 +1,5 @@
+# **Skin Imported has been added to the game which mean this script have no purpose**
+
 > [!NOTE]
 > 
 > This script has been vibecoded using Claude Sonnet 5.5
